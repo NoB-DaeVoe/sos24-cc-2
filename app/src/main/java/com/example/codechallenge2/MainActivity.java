@@ -9,6 +9,7 @@ import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -24,7 +25,7 @@ public class MainActivity extends AppCompatActivity {
 
         simpleChart(temps, "Temperature");
 
-        System.out.println("Morjens");
+        System.out.println(Arrays.toString(Statistics.movingAvg(temps, 3)));
     }
 
     public void simpleChart(double[] values, String label) {
