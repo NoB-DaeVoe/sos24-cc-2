@@ -1,47 +1,151 @@
 package com.example.codechallenge2;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.view.View;
+import android.widget.TextView;
+import android.widget.Toast;
+import android.widget.ToggleButton;
+import android.widget.CompoundButton;
+
 import androidx.appcompat.app.AppCompatActivity;
 import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    double[] temps = {4.7, -4.8, -1.8, 0.7, 0.1, -6, -7.8, -7, -3.8, -10.6, -10.3, -0.3, 4.8, 2.6, 0.1, 1.2, -1.5, -2.7, 1.8, 0.2, -2, -5.5, -1.3, 2.1, -0.6, -0.9, 1, -0.5, -1.4, -1.6, -5.3, -7.7, -8.2, -9.5, -3.9, -0.4, 1, 0.8, -0.4, 0.6, 1, -1.5, -0.5, 1.4, 1.5, 1.8, 2, 1.1, -0.1, 0.1, -0.7, -0.4, -3, -6.8, 2, 1.5, -1.3, -0.2, 1.6, 1.9, 1.3, 0.6, -2, -2.4, 0.8, -0.3, -2.5, -2.6, -0.7, 1.8, 1.3, 0.9, 3, 0.7, 0.8, 1.6, 2.5, 2, 6.2};
+    String currency, datefrom, dateto;
     LineChart chart;
+    ToggleButton sma10, sma30;
+    TextView info;
+    SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         chart = (LineChart) findViewById(R.id.chart);
+        sma10 = findViewById(R.id.sma10);
+        sma30 = findViewById(R.id.sma30);
+        info = findViewById(R.id.textView);
 
-        simpleChart(temps, "Temperature");
+        prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        ArrayList<DataLine> dataLines = new ArrayList<>();
 
-        System.out.println(Arrays.toString(Statistics.movingAvg(temps, 3)));
+        currency = prefs.getString("setCurrency", "SEK Kronor");
+        datefrom = prefs.getString("startDate", "2024-01-01");
+        dateto = prefs.getString("endDate", "2024-03-31");
+
+        info.setText(currency + "  |  " + datefrom + " - " + dateto);
+
+        ArrayList<Double> currencyValues = getCurrencyValues(currency, datefrom, dateto);
+        double[] currencyValue = parseArrayListToDoubleArray(currencyValues);
+
+        dataLines.add(new DataLine(currencyValue, currency, Color.BLACK, 0));
+        improvedChart(dataLines);
+
+        sma10.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    dataLines.add(new DataLine(Statistics.movingAvg(currencyValue, 10), "SMA 10", Color.RED, 9));
+                    improvedChart(dataLines);
+                } else {
+                    Iterator<DataLine> iterator = dataLines.iterator();
+                    while (iterator.hasNext()) {
+                        DataLine dataLine = iterator.next();
+                        if (dataLine.getLabel().equals("SMA 10")) {
+                            iterator.remove();
+                            break;
+                        }
+                    }
+                    improvedChart(dataLines);
+                }
+            }
+        });
+
+        sma30.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    dataLines.add(new DataLine(Statistics.movingAvg(currencyValue, 30), "SMA 30", Color.BLUE, 29));
+                    improvedChart(dataLines);
+                } else {
+                    Iterator<DataLine> iterator = dataLines.iterator();
+                    while (iterator.hasNext()) {
+                        DataLine dataLine = iterator.next();
+                        if (dataLine.getLabel().equals("SMA 30")) {
+                            iterator.remove();
+                            break;
+                        }
+                    }
+                    improvedChart(dataLines);
+                }
+            }
+        });
     }
 
-    public void simpleChart(double[] values, String label) {
-        List<Entry> entries = new ArrayList<>();
+    public void improvedChart(ArrayList<DataLine> dataLines) {
+        List<ILineDataSet> dataSeries = new ArrayList<>();
 
-        for (int i = 0 ; i < values.length ; i++) {
-            entries.add(new Entry(i, (float) values[i]));
+        for (DataLine dataLine : dataLines) {
+            LineDataSet lineDataSet = new LineDataSet(
+                    dataLine.getEntries(),
+                    dataLine.getLabel()
+            );
+            lineDataSet.setDrawValues(false);
+            lineDataSet.setDrawCircles(false);
+            lineDataSet.setColor(dataLine.getColor());
+
+            dataSeries.add(lineDataSet);
         }
-        LineDataSet lineDataSet = new LineDataSet(entries, label);
-        lineDataSet.setDrawValues(false);
-        lineDataSet.setDrawCircles(false);
-        lineDataSet.setColor(Color.RED);
-
-        LineData lineData = new LineData(lineDataSet);
+        LineData lineData = new LineData(dataSeries);
 
         chart.setData(lineData);
         chart.invalidate();
+    }
+
+    public ArrayList<Double> getCurrencyValues(String currency, String from, String to) {
+
+        CurrencyAPI api = new CurrencyAPI();
+        ArrayList<Double> currencyData = null;
+
+        String urlString = String.format("https://api.frankfurter.app/%s..%s",
+                from.trim(),
+                to.trim());
+
+        try {
+            String jsonData = api.execute(urlString).get();
+
+            if (jsonData != null) {
+                currencyData = api.getCurrencyData(jsonData, currency.trim());
+                Toast.makeText(getApplicationContext(), String.format("Hämtade %s valutakursvärden från servern", currencyData.size()), Toast.LENGTH_LONG).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(getApplicationContext(), "Kunde inte hämta växelkursdata från servern: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+
+        return currencyData;
+    }
+
+    public static double[] parseArrayListToDoubleArray(ArrayList<Double> arrayList) {
+        double[] doubleArray = new double[arrayList.size()];
+        for (int i = 0; i < arrayList.size(); i++) {
+            doubleArray[i] = arrayList.get(i);
+        }
+        return doubleArray;
+    }
+
+    public void openSettings(View view) {
+        Intent intent = new Intent (this, SettingsActivity.class);
+        startActivity(intent);
     }
 }

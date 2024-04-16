@@ -1,0 +1,25 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="Chart Settings">
+
+        <EditTextPreference
+            app:key="startDate"
+            app:title="Start Date"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:key="endDate"
+            app:title="End Date"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="SEK Kronor"
+            app:entries="@array/currency_entries"
+            app:entryValues="@array/currency_values"
+            app:key="setCurrency"
+            app:title="Choose Currency"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
