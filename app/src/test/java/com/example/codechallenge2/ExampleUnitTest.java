@@ -1,4 +1,4 @@
-package fi.arcada.codechallenge;
+package com.example.codechallenge2;
 
 import org.junit.Test;
 

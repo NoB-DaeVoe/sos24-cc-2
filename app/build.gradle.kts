@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "fi.arcada.codechallenge"
+    namespace = "com.example.codechallenge2"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "fi.arcada.codechallenge"
+        applicationId = "com.example.codechallenge2"
         minSdk = 30
         targetSdk = 34
         versionCode = 1
@@ -37,4 +37,5 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 }
